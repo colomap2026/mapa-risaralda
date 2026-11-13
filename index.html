@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colo-Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Mismos colores que el mapa (fuentes/template.html) */
+  :root {
+    --amarillo: #FCD116;
+    --azul: #003893;
+    --rojo: #CE1126;
+    --fondo: #f6f4ee;
+    --texto: #1b1b1f;
+    --suave: #5d5d66;
+    --tarjeta: #ffffff;
+    --borde: #d9d6cc;
+    --verde: #4c8f5a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: "Montserrat", system-ui, sans-serif;
+    background: var(--fondo); color: var(--texto);
+    display: flex; flex-direction: column;
+    position: relative; overflow-x: hidden;
+  }
+  /* Fondo: dos fotos desenfocadas que se mueven despacio de izquierda a derecha y se acercan/alejan.
+     Son más anchas que la pantalla (inset negativo) para que al moverse y al desenfocar no se vean bordes. */
+  .fondo {
+    position: fixed; inset: -40px -8vw; z-index: -2;
+    background: center / cover no-repeat;
+    filter: blur(8px) saturate(1.1);
+    /* Dos movimientos con duraciones distintas para que no se repitan iguales:
+       deslizar (izquierda-derecha) y respirar (acercar-alejar) */
+    animation: deslizar 24s ease-in-out infinite alternate,
+               respirar 17s ease-in-out infinite alternate;
+  }
+  .fondo.uno { background-image: url("img/fondo-cascada.png"); }
+  /* Las fotos dos y tres van encima y aparecen/desaparecen: cada foto se ve 10 s (ciclo de 30 s) */
+  .fondo.dos {
+    /* La foto es vertical: se muestra la parte alta (18 %) para que se vea el santuario y no solo el río,
+       y se acerca menos que la cascada para que se vea más alejada */
+    inset: -40px -6vw;
+    background-image: url("img/fondo-puente.jpg"); background-position: center 8%; opacity: 0;
+    animation: deslizar 24s ease-in-out infinite alternate,
+               respirar-suave 17s ease-in-out infinite alternate,
+               turnar-dos 30s ease-in-out infinite;
+  }
+  /* Valle de Cocora: se centra en las palmas y las montañas */
+  .fondo.tres {
+    inset: -40px -6vw;
+    background-image: url("img/fondo-cocora.jpg"); background-position: center 40%; opacity: 0;
+    animation: deslizar 24s ease-in-out infinite alternate,
+               respirar-suave 17s ease-in-out infinite alternate,
+               turnar-tres 30s ease-in-out infinite;
+  }
+  @keyframes respirar-suave {
+    from { scale: 1; }
+    to   { scale: 1.06; }
+  }
+  /* 0–10 s cascada · 10–20 s puente · 20–30 s Cocora (fundido de 1 s entre cada una) */
+  @keyframes turnar-dos {
+    0%, 30%      { opacity: 0; }
+    33.3%, 66.7% { opacity: 1; }
+    67%, 100%    { opacity: 0; } /* se apaga ya tapada por Cocora */
+  }
+  @keyframes turnar-tres {
+    0%, 63.3%    { opacity: 0; }
+    66.7%, 96.7% { opacity: 1; }
+    100%         { opacity: 0; }
+  }
+  /* Velo oscuro suave para que la tarjeta y el pie de página se lean bien */
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: -1;
+    background: rgba(10, 30, 40, .25);
+  }
+  @keyframes deslizar {
+    from { translate: -5vw 0; }
+    to   { translate: 5vw 0; }
+  }
+  @keyframes respirar {
+    from { scale: 1.05; }
+    to   { scale: 1.15; }
+  }
+  /* Con "reducir animaciones" el fondo queda quieto, pero las fotos siguen turnándose */
+  @media (prefers-reduced-motion: reduce) {
+    .fondo.uno { animation: none; }
+    .fondo.dos { animation: turnar-dos 30s ease-in-out infinite; }
+    .fondo.tres { animation: turnar-tres 30s ease-in-out infinite; }
+  }
+  .franja { display: flex; height: 10px; }
+  .franja span:nth-child(1) { flex: 2; background: var(--amarillo); }
+  .franja span:nth-child(2) { flex: 1; background: var(--azul); }
+  .franja span:nth-child(3) { flex: 1; background: var(--rojo); }
+
+  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+
+  /* Tarjeta principal (el recuadro del wireframe) */
+  .tarjeta {
+    width: 100%; max-width: 920px; background: var(--tarjeta);
+    border-radius: 16px; padding: 28px 32px 36px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .3);
+  }
+  .marca { margin: 0 0 8px; font-weight: 800; color: var(--azul); font-size: 15px; letter-spacing: .04em; }
+  .marca b { color: var(--rojo); }
+
+  /* Solo se muestra una pantalla a la vez */
+  .pantalla { display: none; }
+  .pantalla.activa { display: block; animation: entrar .35s ease; }
+  @keyframes entrar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* Dos columnas: izquierda | derecha */
+  .columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+  .columnas.divididas > :first-child { padding-right: 32px; border-right: 1px solid var(--borde); }
+  @media (max-width: 720px) {
+    .columnas { grid-template-columns: 1fr; gap: 24px; }
+    .columnas.divididas > :first-child { padding-right: 0; border-right: 0; padding-bottom: 24px; border-bottom: 1px solid var(--borde); }
+    .tarjeta { padding: 24px 20px 28px; }
+  }
+
+  h1 { margin: 4px 0 6px; text-align: center; font-size: clamp(28px, 5vw, 42px); font-weight: 800; color: var(--azul); }
+  .sub { margin: 0 0 28px; text-align: center; color: var(--suave); font-size: 14px; }
+
+  /* Logo */
+  .lado-logo { display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; }
+  .logo { width: min(260px, 60vw); }
+  /* el fondo del logo es casi blanco: "multiply" lo funde con la tarjeta para que no se vea un recuadro */
+  .logo img { width: 100%; height: auto; display: block; mix-blend-mode: multiply; }
+  .lema { margin: 0; font-size: 22px; font-weight: 700; color: var(--texto); }
+  .lema span { color: var(--verde); }
+
+  /* Campos */
+  form { display: flex; flex-direction: column; gap: 14px; }
+  label { font-size: 13px; font-weight: 700; color: var(--suave); display: block; margin-bottom: 6px; }
+  .campo-icono { display: flex; align-items: center; gap: 12px; }
+  .campo-icono svg { flex: none; width: 34px; height: 34px; color: var(--azul); }
+  input[type=text], input[type=email], input[type=password] {
+    width: 100%; padding: 12px 14px; font: 500 15px "Montserrat", sans-serif; color: var(--texto);
+    background: #fff; border: 1.5px solid var(--borde); border-radius: 10px; outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  input:focus { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(0, 56, 147, .15); }
+  .nota { margin: 0; font-size: 13px; color: var(--suave); }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--suave); }
+  .check input { width: 18px; height: 18px; accent-color: var(--azul); }
+
+  /* Botones y enlaces */
+  .boton {
+    display: block; width: 100%; padding: 12px 18px; border: 0; border-radius: 10px; cursor: pointer;
+    font: 700 15px "Montserrat", sans-serif; color: #fff; background: var(--azul);
+    box-shadow: 0 3px 10px rgba(0,0,0,.18); transition: transform .15s ease, background .2s ease;
+  }
+  .boton:hover { background: var(--rojo); transform: translateY(-1px); }
+  .boton.grande { font-size: 20px; padding: 14px 18px; }
+  .boton.google {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; color: var(--texto); border: 1.5px solid var(--borde); box-shadow: none;
+  }
+  .boton.google:hover { background: #f1f1ec; }
+  .centro { text-align: center; }
+  a.enlace { color: var(--azul); font-size: 14px; font-weight: 700; text-decoration: none; }
+  a.enlace:hover { color: var(--rojo); text-decoration: underline; }
+  .separador { display: flex; align-items: center; gap: 10px; color: var(--suave); font-size: 12px; margin: 6px 0; }
+  .separador::before, .separador::after { content: ""; flex: 1; height: 1px; background: var(--borde); }
+  .lado-acciones { display: flex; flex-direction: column; gap: 14px; text-align: center; }
+
+  .aviso {
+    display: none; margin: 0; padding: 10px 14px; border-radius: 10px; font-size: 14px;
+    background: #e8f3ea; color: #24572f; border: 1px solid #bfdcc5;
+  }
+  .aviso.ver { display: block; }
+
+  footer { text-align: center; font-size: 12px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); padding: 0 16px 20px; }
+</style>
+</head>
+<body>
+<div class="fondo uno" aria-hidden="true"></div>
+<div class="fondo dos" aria-hidden="true"></div>
+<div class="fondo tres" aria-hidden="true"></div>
+<div class="franja"><span></span><span></span><span></span></div>
+
+<main>
+  <div class="tarjeta">
+    <p class="marca">Colo<b>-</b>Map</p>
+
+    <!-- ===== 1. INICIO DE SESIÓN ===== -->
+    <section class="pantalla" id="login">
+      <div class="columnas">
+        <div class="lado-logo">
+          <div class="logo">
+            <img src="img/logo-colomap.png" alt="Colo-map: cultura y color en tu interior" width="293" height="333">
+          </div>
+          <p class="lema">Conoce nuestro <span>eje cafetero</span>.</p>
+        </div>
+
+        <div>
+          <form id="formLogin">
+            <div class="campo-icono">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>
+              <input type="text" id="usuario" placeholder="Usuario" aria-label="Usuario">
+            </div>
+            <div class="campo-icono">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0z"/></svg>
+              <input type="password" id="clave" placeholder="Contraseña" aria-label="Contraseña">
+            </div>
+            <button class="boton" type="submit">Ingresar</button>
+            <p class="centro"><a class="enlace" href="#recuperar">¿Olvidaste tu contraseña?</a></p>
+            <div class="separador">o</div>
+            <a class="boton google" href="#registro">
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.8 6C12.3 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6C1 16.6 0 20.2 0 24s.9 7.4 2.6 10.7z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.4 2.3-6.4 0-11.7-4.1-13.6-9.8l-7.8 6C6.6 42.6 14.6 48 24 48z"/></svg>
+              Crear cuenta con Google
+            </a>
+            <p class="centro"><a class="enlace" href="#registro">Crear cuenta con correo</a></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 2. RECUPERAR CONTRASEÑA ===== -->
+    <section class="pantalla" id="recuperar">
+      <h1>Recuperar Contraseña</h1>
+      <p class="sub">Por favor, introduzca su correo electrónico para restablecer su contraseña.</p>
+      <form id="formRecuperar">
+        <div class="columnas divididas">
+          <div>
+            <label for="correoRec">Correo electrónico</label>
+            <input type="email" id="correoRec" placeholder="ejemplo@gmail.com">
+            <p class="nota" style="margin-top:8px">Recibirás un enlace en tu correo electrónico.</p>
+          </div>
+          <div class="lado-acciones">
+            <button class="boton" type="submit">Enviar enlace de recuperación</button>
+            <p class="aviso" id="avisoRec">Listo. Si el correo está registrado, te llegará un enlace para restablecer tu contraseña.</p>
+          </div>
+        </div>
+      </form>
+      <p class="centro" style="margin-top:28px"><a class="enlace" href="#login">Volver a la página principal</a></p>
+    </section>
+
+    <!-- ===== 3. CREAR CUENTA ===== -->
+    <section class="pantalla" id="registro">
+      <h1>Crear Cuenta</h1>
+      <p class="sub">Completa tus datos para empezar a crear tu cuenta.</p>
+      <form id="formRegistro">
+        <div class="columnas divididas">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div><label for="nombres">Nombres</label><input type="text" id="nombres"></div>
+            <div><label for="apellidos">Apellidos</label><input type="text" id="apellidos"></div>
+            <div><label for="correoReg">Correo electrónico</label><input type="email" id="correoReg"></div>
+            <div><label for="claveReg">Contraseña</label><input type="password" id="claveReg"></div>
+            <div><label for="claveReg2">Confirmar contraseña</label><input type="password" id="claveReg2"></div>
+            <label class="check"><input type="checkbox" id="terminos"> Aceptar términos y condiciones</label>
+          </div>
+          <div class="lado-acciones">
+            <button class="boton grande" type="submit">Registrarse</button>
+            <a class="enlace" href="#login">Volver a la página principal</a>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>
+
+<footer>Colo-Map · Mapa interactivo de Risaralda</footer>
+
+<script>
+  // Navegación entre pantallas usando el # de la dirección (#login, #recuperar, #registro)
+  function mostrar() {
+    const id = location.hash.slice(1);
+    const destino = document.getElementById(id) || document.getElementById('login');
+    document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p === destino));
+    document.getElementById('avisoRec').classList.remove('ver');
+  }
+  window.addEventListener('hashchange', mostrar);
+  mostrar();
+
+  // POR AHORA NO HAY VALIDACIÓN: cualquier usuario y contraseña (incluso vacíos) entran al mapa.
+  // El nombre viaja en la dirección (?usuario=...) para que el mapa muestre la bienvenida;
+  // va aunque esté vacío, y en ese caso el mapa saluda solo con "Hola".
+  function entrar(nombre) {
+    location.href = 'risaralda.html?usuario=' + encodeURIComponent((nombre || '').trim());
+  }
+
+  document.getElementById('formLogin').addEventListener('submit', e => {
+    e.preventDefault(); entrar(document.getElementById('usuario').value);
+  });
+  document.getElementById('formRegistro').addEventListener('submit', e => {
+    e.preventDefault(); entrar(document.getElementById('nombres').value);
+  });
+  document.getElementById('formRecuperar').addEventListener('submit', e => {
+    e.preventDefault();
+    document.getElementById('avisoRec').classList.add('ver');
+  });
+</script>
+</body>
+</html>

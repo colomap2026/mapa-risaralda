@@ -337,6 +337,28 @@ for etiqueta, a, b in (("mirador", mx, my), ("termales", tx, ty), ("casa de la c
         if inside((a, b), anillo):
             print(etiqueta, "dentro de:", NAMES[m["properties"]["MPIO_CCNCT"]], "ancla:", round(a, 1), round(b, 1), file=sys.stderr)
 
+# Resto de lugares representativos: clave de la plantilla -> (municipio, lon, lat, origen del dato).
+# En la plantilla aparecen como __LUGAR_<CLAVE>_X__ y __LUGAR_<CLAVE>_Y__.
+LUGARES = {
+    "GAUCHO": ("66400", -75.8825661, 4.8995993, "centro de La Virginia, Nominatim"),
+    "PARROQUIA": ("66088", -75.8687157, 5.2003646, "Parroquia Santa Rosa de Lima, OpenStreetMap"),
+    "MUSEO_APIA": ("66045", -75.9425022, 5.1065543, "centro de Apía, Nominatim"),
+    "BALCON": ("66075", -75.9591466, 4.9510551, "cabecera de Balboa, OpenStreetMap"),
+    "JARDIN": ("66318", -75.7947416, 5.3137961, "sendero Jardín Botánico, OpenStreetMap"),
+    "PARQUE_CELIA": ("66383", -76.0029624, 5.0040622, "cabecera de La Celia, OpenStreetMap"),
+    "TATAMA": ("66687", -76.0480612, 5.0891597, "Cuchilla de las Alturas, borde del Tatamá, OpenStreetMap"),
+    "MUSEO_QUINCHIA": ("66594", -75.729467, 5.3376127, "cabecera de Quinchía, OpenStreetMap"),
+    "PLAZA_PR": ("66572", -76.0307045, 5.2215405, "Alcaldía de Pueblo Rico, OpenStreetMap"),
+    "AVES": ("66456", -75.8826296, 5.2958362, "cabecera de Mistrató, OpenStreetMap"),
+}
+anclas = {}
+for clave, (codigo, lon, lat, origen) in LUGARES.items():
+    a, b = proj((lon, lat))
+    anclas[clave] = (a, b)
+    dueno = [m["properties"]["MPIO_CCNCT"] for m in feats if inside((a, b), [proj(c) for c in m["_polys"][0][0]])]
+    print(clave, "dentro de:", ", ".join(NAMES[d] for d in dueno) or "NINGUNO",
+          "OK" if codigo in dueno else "FUERA DE " + NAMES[codigo], file=sys.stderr)
+
 tpl = open(sys.argv[3], encoding="utf-8").read()
 html = (tpl.replace("__W__", f"{W:.0f}").replace("__H__", f"{H:.0f}")
            .replace("__VX__", f"{vx:.1f}").replace("__VY__", f"{vy:.1f}")
@@ -344,4 +366,6 @@ html = (tpl.replace("__W__", f"{W:.0f}").replace("__H__", f"{H:.0f}")
            .replace("__TX__", f"{tx:.1f}").replace("__TY__", f"{ty:.1f}")
            .replace("__CX__", f"{cx:.1f}").replace("__CY__", f"{cy:.1f}")
            .replace("__DATA__", json.dumps(munis, ensure_ascii=False, separators=(",", ":"))))
+for clave, (a, b) in anclas.items():
+    html = html.replace(f"__LUGAR_{clave}_X__", f"{a:.1f}").replace(f"__LUGAR_{clave}_Y__", f"{b:.1f}")
 open(out, "w", encoding="utf-8").write(html)

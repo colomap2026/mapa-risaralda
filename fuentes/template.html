@@ -5,17 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mapa de Risaralda</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 <style>
   :root {
     --amarillo: #FCD116;
     --azul: #003893;
     --rojo: #CE1126;
-    --fondo: #f6f4ee;
-    --texto: #1b1b1f;
-    --suave: #5d5d66;
-    --tarjeta: #ffffff;
-    --borde-mapa: #ffffff;
+    /* fondo blanco; las ventanas del mapa y del panel de municipios en azul pizarra */
+    --fondo: #ffffff;
+    --texto: #14233b;
+    --suave: #33455e;
+    --tarjeta: #2c3e50;
+    --borde-mapa: #2c3e50;
     --verde: #4c8f5a;
     --division: #e2f6da;
     --camino: #f3f3ef;
@@ -27,16 +28,66 @@
     font-family: "Montserrat", system-ui, sans-serif;
     background: var(--fondo);
     color: var(--texto);
+    overflow-x: hidden;
   }
+
+  /* Fondo (igual que en index.html): tres fotos desenfocadas que se mueven de izquierda a derecha,
+     se acercan/alejan y se turnan cada 10 s. Son más anchas que la pantalla para que no se vean bordes. */
+  .fondo {
+    position: fixed; inset: -40px -8vw; z-index: -2; pointer-events: none;
+    background: center / cover no-repeat;
+    filter: blur(8px) saturate(1.1);
+    animation: deslizar 24s ease-in-out infinite alternate,
+               respirar 17s ease-in-out infinite alternate;
+  }
+  .fondo.uno { background-image: url("img/fondo-cascada.png"); }
+  .fondo.dos {
+    inset: -40px -6vw;
+    background-image: url("img/fondo-puente.jpg"); background-position: center 8%; opacity: 0;
+    animation: deslizar 24s ease-in-out infinite alternate,
+               respirar-suave 17s ease-in-out infinite alternate,
+               turnar-dos 30s ease-in-out infinite;
+  }
+  .fondo.tres {
+    inset: -40px -6vw;
+    background-image: url("img/fondo-cocora.jpg"); background-position: center 40%; opacity: 0;
+    animation: deslizar 24s ease-in-out infinite alternate,
+               respirar-suave 17s ease-in-out infinite alternate,
+               turnar-tres 30s ease-in-out infinite;
+  }
+  /* velo oscuro para que los textos se lean sobre las fotos */
+  .velo { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: rgba(10, 30, 40, .35); }
+  @keyframes deslizar { from { translate: -5vw 0; } to { translate: 5vw 0; } }
+  @keyframes respirar { from { scale: 1.05; } to { scale: 1.15; } }
+  @keyframes respirar-suave { from { scale: 1; } to { scale: 1.06; } }
+  /* 0–10 s cascada · 10–20 s puente · 20–30 s Cocora (fundido de 1 s entre cada una) */
+  @keyframes turnar-dos {
+    0%, 30%      { opacity: 0; }
+    33.3%, 66.7% { opacity: 1; }
+    67%, 100%    { opacity: 0; }
+  }
+  @keyframes turnar-tres {
+    0%, 63.3%    { opacity: 0; }
+    66.7%, 96.7% { opacity: 1; }
+    100%         { opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fondo.uno { animation: none; }
+    .fondo.dos { animation: turnar-dos 30s ease-in-out infinite; }
+    .fondo.tres { animation: turnar-tres 30s ease-in-out infinite; }
+  }
+
   .franja { display: flex; height: 10px; }
   .franja span:nth-child(1) { flex: 2; background: var(--amarillo); }
   .franja span:nth-child(2) { flex: 1; background: var(--azul); }
   .franja span:nth-child(3) { flex: 1; background: var(--rojo); }
 
   header { max-width: 1100px; margin: 0 auto; padding: 28px 16px 8px; }
-  header p.pre { margin: 0; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 13px; color: var(--rojo); }
-  header h1 { margin: 4px 0 6px; font-size: clamp(30px, 5vw, 48px); font-weight: 800; color: var(--azul); }
-  header p.sub { margin: 0; color: var(--suave); }
+  /* textos sobre las fotos del fondo: claros y con sombra */
+  header, footer { text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
+  header p.pre { margin: 0; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 13px; color: var(--amarillo); }
+  header h1 { margin: 4px 0 6px; font-size: clamp(30px, 5vw, 48px); font-weight: 800; color: #fff; }
+  header p.sub { margin: 0; color: #e8eef4; }
 
   main {
     max-width: 1100px; margin: 0 auto; padding: 16px;
@@ -77,6 +128,7 @@
   .hit path.clicable { cursor: pointer; }
   .muni .forma { fill: var(--verde); stroke: var(--division); stroke-width: 1; stroke-linejoin: round;
                vector-effect: non-scaling-stroke; }
+  .muni .relieve { pointer-events: none; }
   /* caminos y ríos reales: su grosor en pantalla no cambia con el zoom */
   .muni .trazo { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .muni .via1 { stroke: var(--camino); stroke-width: 1.9; }
@@ -131,31 +183,73 @@
     padding: 6px 8px; border-radius: 8px; cursor: pointer; color: var(--texto);
     display: flex; align-items: center; gap: 10px;
   }
-  aside li button:hover, aside li button.activo { background: #f0eee6; }
+  aside li button:hover, aside li button.activo { background: rgba(255, 255, 255, .12); }
+  /* dentro de las ventanas azules el texto va claro; fuera de ellas (sobre blanco) sigue oscuro */
+  .mapa, aside .tarjeta { --texto: #eef3f8; --suave: #c5d3e2; }
+  /* acabado satinado: banda de brillo que se desliza, tejido fino y luz desde arriba */
+  .mapa, aside .tarjeta {
+    background-color: var(--tarjeta);
+    background-image:
+      linear-gradient(115deg, rgba(255, 255, 255, 0) 30%, rgba(214, 230, 255, .10) 42%, rgba(255, 255, 255, .17) 48%,
+                      rgba(214, 230, 255, .08) 54%, rgba(255, 255, 255, 0) 66%),
+      repeating-linear-gradient(115deg, rgba(255, 255, 255, .028) 0 1px, rgba(0, 0, 0, 0) 1px 3px),
+      radial-gradient(130% 70% at 25% 0%, rgba(225, 238, 255, .13), rgba(255, 255, 255, 0) 60%),
+      linear-gradient(165deg, #3b5269 0%, #2c3e50 45%, #213040 100%);
+    background-size: 260% 100%, auto, auto, auto;
+    background-position: 100% 0, 0 0, 0 0, 0 0;
+    box-shadow: inset 0 1px 0 rgba(220, 235, 255, .18), inset 0 -18px 40px rgba(0, 0, 0, .22), 0 6px 24px rgba(0, 0, 0, .12);
+    animation: satin 11s ease-in-out infinite alternate;
+  }
+  @keyframes satin {
+    from { background-position: 100% 0, 0 0, 0 0, 0 0; }
+    to { background-position: 0% 0, 0 0, 0 0, 0 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .mapa, aside .tarjeta { animation: none; background-position: 60% 0, 0 0, 0 0, 0 0; } }
+  aside h2 { color: var(--amarillo); }
   aside li i { width: 12px; height: 12px; border-radius: 3px; flex: none; background: var(--verde); }
   .leyenda { list-style: none; margin: 16px 0 0; padding: 14px 0 0; border-top: 1px solid rgba(128,128,128,.25);
              display: grid; gap: 7px; font-size: 13px; color: var(--suave); }
   .leyenda li { display: flex; align-items: center; gap: 10px; }
   .leyenda svg { width: 26px; height: 16px; flex: none; cursor: default; }
 
-  footer { max-width: 1100px; margin: 0 auto; padding: 8px 16px 32px; color: var(--suave); font-size: 12px; }
+  footer { max-width: 1100px; margin: 0 auto; padding: 8px 16px 32px; color: #e8eef4; font-size: 12px; }
+  footer a { color: #fff; }
 
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --fondo: #121318; --texto: #ececf1; --suave: #a2a2ad; --tarjeta: #1c1d24; --borde-mapa: #1c1d24;
-    }
-    :root:not([data-theme="light"]) aside li button:hover,
-    :root:not([data-theme="light"]) aside li button.activo { background: #2a2b33; }
-    :root:not([data-theme="light"]) header h1, :root:not([data-theme="light"]) aside h2 { color: var(--amarillo); }
+  /* bienvenida a pantalla completa, al estilo del "hello" del iPhone: el saludo se escribe letra por letra */
+  .bienvenida {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+    background: var(--fondo); cursor: pointer; transition: opacity .5s ease, transform .5s ease;
   }
+  .bienvenida[hidden] { display: none; }
+  .bienvenida.salir { opacity: 0; transform: scale(1.04); pointer-events: none; }
+  .bienvenida svg { width: min(92vw, 900px); height: auto; overflow: visible; }
+  .bienvenida text {
+    font-family: "Dancing Script", cursive; font-weight: 600; font-size: 120px;
+    fill: url(#hola-color); fill-opacity: 0; stroke: url(#hola-color); stroke-width: 1.6px;
+    stroke-linejoin: round; stroke-dasharray: 900; stroke-dashoffset: 900;
+  }
+  .bienvenida text.escrita { animation: escribir var(--dur) ease-out var(--retraso) forwards; }
+  @keyframes escribir {
+    0% { stroke-dashoffset: 900; fill-opacity: 0; }
+    70% { stroke-dashoffset: 0; fill-opacity: 0; }
+    100% { stroke-dashoffset: 0; fill-opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bienvenida text.escrita { animation: none; stroke-dashoffset: 0; fill-opacity: 1; }
+  }
+
 </style>
 </head>
 <body>
+<div class="fondo uno" aria-hidden="true"></div>
+<div class="fondo dos" aria-hidden="true"></div>
+<div class="fondo tres" aria-hidden="true"></div>
+<div class="velo" aria-hidden="true"></div>
 <div class="franja"><span></span><span></span><span></span></div>
 <header>
   <p class="pre">Colombia · Eje Cafetero</p>
   <h1>Departamento de Risaralda</h1>
-  <p class="sub">Pasa el mouse sobre un municipio para resaltarlo. Haz clic en Pereira, Dosquebradas, Santa Rosa de Cabal o Marsella.</p>
+  <p class="sub">Pasa el mouse sobre un municipio para resaltarlo. Haz clic en un municipio para ver su lugar representativo.</p>
 </header>
 
 <main>
@@ -170,6 +264,59 @@
         <path id="pza-caballo" d="M-24,0 H24 V-7 Q18,-12 16,-20 Q22,-48 10,-68 Q4,-80 -6,-84 L-8,-92 L-14,-82 Q-24,-72 -30,-58 L-26,-50 L-14,-56 Q-8,-58 -6,-50 Q-14,-36 -14,-20 Q-18,-12 -24,-7 Z"/>
         <path id="pza-alfil" d="M-24,0 H24 V-7 Q16,-12 12,-20 Q8,-40 8,-56 H14 V-62 H9 Q14,-72 0,-88 Q-14,-72 -9,-62 H-14 V-56 H-8 Q-8,-40 -12,-20 Q-16,-12 -24,-7 Z M-4,-92 a4,4 0 1,1 8,0 a4,4 0 1,1 -8,0 Z"/>
         <path id="pza-dama" d="M-25,0 H25 V-7 Q17,-12 13,-20 Q9,-44 9,-60 H16 V-66 H10 L20,-92 L9,-78 L5,-98 L0,-80 L-5,-98 L-9,-78 L-20,-92 L-10,-66 H-16 V-60 H-9 Q-9,-44 -13,-20 Q-17,-12 -25,-7 Z"/>
+        <!-- siluetas de los demás modelos (misma convención: base en y=0) -->
+        <linearGradient id="bronce"><stop offset="0" stop-color="#c9925a"/><stop offset=".5" stop-color="#8a5a2e"/><stop offset="1" stop-color="#4e3018"/></linearGradient>
+        <linearGradient id="oro"><stop offset="0" stop-color="#fff1a8"/><stop offset=".45" stop-color="#e3b23c"/><stop offset="1" stop-color="#9a6b12"/></linearGradient>
+        <linearGradient id="copa"><stop offset="0" stop-color="#6fbf6a"/><stop offset=".55" stop-color="#3f8a4a"/><stop offset="1" stop-color="#245a30"/></linearGradient>
+        <linearGradient id="frailejon"><stop offset="0" stop-color="#e2e6c8"/><stop offset=".5" stop-color="#a9b27a"/><stop offset="1" stop-color="#6c7446"/></linearGradient>
+        <path id="sil-copa" d="M-3,0 H3 V-30 H-3 Z M-26,-52 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0 Z"/>
+        <path id="sil-palma" d="M-3,0 Q-6,-50 2,-96 L6,-96 Q-1,-50 3,0 Z M4,-96 Q-30,-104 -46,-80 Q-24,-96 4,-92 Z M4,-96 Q34,-106 48,-82 Q26,-96 4,-92 Z M4,-96 Q-14,-124 -36,-118 Q-12,-112 4,-94 Z M4,-96 Q22,-126 42,-116 Q20,-110 4,-94 Z"/>
+        <path id="sil-gaucho" d="M-30,-86 Q0,-96 30,-86 Q20,-84 12,-84 Q10,-100 0,-100 Q-10,-100 -12,-84 Q-20,-84 -30,-86 Z M-7,-76 a7,8 0 1,0 14,0 a7,8 0 1,0 -14,0 Z M-8,-67 L8,-67 L30,-34 L-30,-34 Z M-13,-34 L-4,-34 L-3,0 L-14,0 Z M4,-34 L13,-34 L14,0 L3,0 Z M10,-44 L40,-70 L43,-67 L13,-41 Z M2,-40 a12,10 0 1,0 24,0 a12,10 0 1,0 -24,0 Z"/>
+        <path id="sil-nota" d="M2,-30 V-8 a6,5 0 1,1 -4,-4 V-34 L16,-30 V-24 L4,-27 Z"/>
+        <path id="sil-maceta" d="M-14,0 H14 L12,-10 H-12 Z"/>
+        <path id="sil-flores" d="M-20,-14 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0 Z M-6,-22 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0 Z M4,-12 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0 Z"/>
+        <path id="sil-frailejon" d="M-7,0 H7 L8,-50 Q14,-54 9,-58 H-9 Q-14,-54 -8,-50 Z M0,-58 Q-28,-62 -34,-80 Q-14,-72 -4,-64 Q-20,-86 -14,-100 Q-4,-82 0,-66 Q4,-82 14,-100 Q20,-86 4,-64 Q14,-72 34,-80 Q28,-62 0,-58 Z"/>
+        <path id="sil-frailejon-flor" d="M-1,-88 L1,-88 L2,-116 L-2,-116 Z M-4,-120 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z"/>
+        <path id="sil-poporo" d="M-6,0 H6 L5,-6 Q30,-20 26,-44 Q22,-64 8,-70 L6,-86 Q10,-90 6,-92 H-6 Q-10,-90 -6,-86 L-8,-70 Q-22,-64 -26,-44 Q-30,-20 -5,-6 Z"/>
+        <path id="sil-busto" d="M-16,0 Q-16,-16 0,-18 Q16,-16 16,0 Z"/>
+        <path id="sil-cabeza" d="M-8,-27 a8,9 0 1,0 16,0 a8,9 0 1,0 -16,0 Z"/>
+        <path id="sil-ave-a" d="M-2,-6 Q-16,-22 -30,-18 Q-16,-12 -6,-2 Q0,0 6,-2 Q16,-12 30,-18 Q16,-22 2,-6 Q0,-8 -2,-6 Z"/>
+        <path id="sil-ave-b" d="M-2,-6 Q-16,-2 -30,6 Q-14,4 -6,2 Q0,4 6,2 Q14,4 30,6 Q16,-2 2,-6 Q0,-8 -2,-6 Z"/>
+        <path id="sil-mariposa-a" d="M0,-10 Q-14,-26 -20,-16 Q-16,-6 0,-8 Q-12,0 -10,4 Q-4,6 0,-6 Q4,6 10,4 Q12,0 0,-8 Q16,-6 20,-16 Q14,-26 0,-10 Z"/>
+        <path id="sil-mariposa-b" d="M0,-10 Q-5,-26 -7,-16 Q-5,-6 0,-8 Q-4,0 -3,4 Q-1,6 0,-6 Q1,6 3,4 Q4,0 0,-8 Q5,-6 7,-16 Q5,-26 0,-10 Z"/>
+        <path id="sil-bangsia" d="M-24,-4 Q-30,-2 -34,4 L-22,0 Q-10,-2 0,-6 Q14,-10 18,-22 Q20,-30 28,-30 L34,-27 L28,-25 Q24,-14 16,-6 Q6,2 -24,-4 Z M-2,-4 L-3,4 M4,-5 L4,4"/>
+        <path id="sil-bangsia-pecho" d="M2,-7 Q12,-10 16,-18 Q18,-24 23,-26 Q23,-15 15,-7 Q8,-3 2,-5 Z"/>
+        <!-- estatuas del parque de La Celia: hombre con sombrero y caballo (de lado) -->
+        <path id="sil-arriero" d="M-16,-96 Q0,-102 16,-96 Q10,-95 8,-95 Q7,-106 0,-106 Q-7,-106 -8,-95 Q-10,-95 -16,-96 Z M-6,-88 a6,7 0 1,0 12,0 a6,7 0 1,0 -12,0 Z M-12,-80 L12,-80 L14,-50 L-14,-50 Z M-12,-80 L-18,-52 L-14,-51 L-10,-74 Z M12,-80 L18,-52 L14,-51 L10,-74 Z M-13,-50 L-2,-50 L-3,-8 L-12,-8 Z M2,-50 L13,-50 L12,-8 L3,-8 Z M-13,-8 H-2 V0 H-15 Z M2,-8 H13 L15,0 H2 Z"/>
+        <path id="sil-caballo" d="M-34,-44 Q-30,-56 -14,-56 L16,-56 Q22,-56 26,-62 L34,-82 Q36,-88 40,-86 L44,-74 Q46,-68 42,-66 L34,-62 Q30,-50 28,-44 L28,0 L22,0 L21,-36 L-20,-36 L-22,0 L-28,0 L-28,-36 Q-36,-38 -34,-44 Z M-14,-36 L-12,0 L-17,0 L-19,-36 Z M14,-36 L16,0 L11,0 L10,-36 Z M-34,-46 Q-42,-40 -40,-24 Q-38,-36 -32,-40 Z M40,-86 L38,-94 L36,-86 Z"/>
+        <!-- Bangsia aurinegra detallada: cuerpo negro brillante, ala azulada, pecho dorado, ojo y patas -->
+        <linearGradient id="plumaje" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4256"/><stop offset=".5" stop-color="#15171d"/><stop offset="1" stop-color="#050608"/></linearGradient>
+        <linearGradient id="pecho-dorado" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset=".6" stop-color="#f5a300"/><stop offset="1" stop-color="#c46f00"/></linearGradient>
+        <g id="ave-bangsia" transform="translate(0,-12)">
+          <path d="M1,3 h1.6 v9 h-1.6 Z M7,3 h1.6 v9 h-1.6 Z M-1,11 h5 v1.2 h-5 Z M5,11 h5 v1.2 h-5 Z" fill="#8a8f99" stroke="none"/>
+          <path d="M-34,4 L-26,-2 L-16,-4 Q-14,-14 -4,-18 Q4,-30 16,-30 Q26,-30 30,-22 Q30,-6 20,0 Q8,6 -6,4 L-18,2 Z" fill="url(#plumaje)" stroke="#000" stroke-width=".8"/>
+          <path d="M-12,-8 Q0,-17 15,-12 Q8,-2 -4,0 Q-12,0 -17,-2 Z" fill="#26375e" stroke="none"/>
+          <path d="M-10,-6 Q0,-12 10,-9" fill="none" stroke="#4c6aa8" stroke-width="1"/>
+          <path d="M14,-13 Q24,-15 28,-21 Q31,-8 21,-1 Q12,3 3,2 Q12,-4 14,-13 Z" fill="url(#pecho-dorado)" stroke="#8a5a00" stroke-width=".6"/>
+          <path d="M29,-23 L38,-20 L29,-17 Z" fill="#1a1a1a" stroke="none"/>
+          <path d="M20,-24 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0 Z" fill="#fff" stroke="none"/>
+          <path d="M21.4,-24 a1,1 0 1,0 2,0 a1,1 0 1,0 -2,0 Z" fill="#000" stroke="none"/>
+        </g>
+        <!-- animales del jardín botánico -->
+        <g id="ave-garza">
+          <path d="M-2,-22 h1.4 v22 h-1.4 Z M3,-22 h1.4 v22 h-1.4 Z" fill="#2b2b2b" stroke="none"/>
+          <path d="M-16,-30 Q-4,-40 8,-35 Q14,-30 10,-24 Q0,-18 -16,-26 Z" fill="#f6f6f2" stroke="#9a9a92" stroke-width=".6"/>
+          <path d="M6,-34 Q2,-46 8,-54 Q14,-60 18,-56 Q12,-52 10,-46 Q12,-38 10,-32 Z" fill="#f6f6f2" stroke="#9a9a92" stroke-width=".6"/>
+          <path d="M14,-58 a4,3.5 0 1,0 8,0 a4,3.5 0 1,0 -8,0 Z" fill="#f6f6f2" stroke="#9a9a92" stroke-width=".6"/>
+          <path d="M21,-59 L33,-57 L21,-56 Z" fill="#f2b705" stroke="none"/>
+          <path d="M17,-58.8 a.9,.9 0 1,0 1.8,0 a.9,.9 0 1,0 -1.8,0 Z" fill="#000" stroke="none"/>
+        </g>
+        <g id="ardilla">
+          <path d="M-8,-4 Q-24,-6 -22,-22 Q-20,-34 -10,-32 Q-16,-24 -12,-14 Q-10,-8 -8,-4 Z" fill="#c07a3e" stroke="#6b3e16" stroke-width=".6"/>
+          <path d="M-8,0 Q-14,-10 -8,-18 Q0,-24 6,-18 Q10,-12 8,-4 Q6,0 -8,0 Z" fill="#9a5a2a" stroke="#5a3010" stroke-width=".6"/>
+          <path d="M2,-22 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z M8,-27 L10,-32 L12,-26 Z" fill="#9a5a2a" stroke="#5a3010" stroke-width=".6"/>
+          <path d="M9,-23 a1,1 0 1,0 2,0 a1,1 0 1,0 -2,0 Z" fill="#000" stroke="none"/>
+        </g>
         <path id="pza-rey" d="M-25,0 H25 V-7 Q17,-12 13,-20 Q9,-46 9,-64 H16 V-70 H11 Q20,-84 4,-90 V-98 H11 V-104 H4 V-112 H-4 V-104 H-11 V-98 H-4 V-90 Q-20,-84 -11,-70 H-16 V-64 H-9 Q-9,-46 -13,-20 Q-17,-12 -25,-7 Z"/>
         <g id="icono-cerro">
           <path d="M-13,9 L-2,-11 L1,-6 L4,-10 L13,9 Z" fill="#8a6c4f"/>
@@ -191,6 +338,16 @@
         <g id="mirador" class="modelo3d" style="display:none"></g>
         <g id="termales" class="modelo3d" style="display:none"></g>
         <g id="casa-cultura" class="modelo3d" style="display:none"></g>
+        <g id="gaucho" class="modelo3d" style="display:none"></g>
+        <g id="parroquia" class="modelo3d" style="display:none"></g>
+        <g id="museo-apia" class="modelo3d" style="display:none"></g>
+        <g id="balcon" class="modelo3d" style="display:none"></g>
+        <g id="jardin" class="modelo3d" style="display:none"></g>
+        <g id="parque-celia" class="modelo3d" style="display:none"></g>
+        <g id="tatama" class="modelo3d" style="display:none"></g>
+        <g id="museo-quinchia" class="modelo3d" style="display:none"></g>
+        <g id="plaza-pueblo-rico" class="modelo3d" style="display:none"></g>
+        <g id="aves" class="modelo3d" style="display:none"></g>
         <g class="hit" id="hit"></g>
       </g>
     </svg>
@@ -218,17 +375,104 @@
     </div>
   </aside>
 </main>
-<footer>Límites municipales: DANE vía geoBoundaries (2020). Áreas aproximadas. Vías, ríos, cerros y cascadas: © colaboradores de OpenStreetMap (ODbL). Las estructuras son modelos ilustrativos, muy ampliados respecto a la escala del mapa; la forma del mirador es genérica.</footer>
+<div class="bienvenida" id="bienvenida" hidden role="status" aria-live="polite">
+  <svg id="hola-svg" viewBox="0 0 900 220" aria-hidden="true">
+    <defs>
+      <linearGradient id="hola-color" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="900" y2="0">
+        <stop offset="0" stop-color="#e0a800"/><stop offset=".45" stop-color="#003893"/><stop offset="1" stop-color="#CE1126"/>
+      </linearGradient>
+    </defs>
+    <g id="hola-letras"></g>
+  </svg>
+  <span id="hola-lector" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span>
+</div>
+<footer>Límites municipales: DANE vía geoBoundaries (2020). Relieve: Terrain Tiles de AWS (SRTM, NASA). Áreas aproximadas. Vías, ríos, cerros y cascadas: © colaboradores de OpenStreetMap (ODbL). Las estructuras son modelos ilustrativos, muy ampliados respecto a la escala del mapa; varias formas son aproximadas.</footer>
 
 <script>
 const DATA = __DATA__;
+
+// Bienvenida: index.html manda ?usuario=... (vacío si no se escribió nombre). Se muestra una pantalla completa
+// con "Hola, nombre" escrito a mano letra por letra; luego se desvanece y queda el mapa. Un clic la salta.
+(() => {
+  const parametros = new URLSearchParams(location.search);
+  if (!parametros.has("usuario")) return;
+  const nombre = (parametros.get("usuario") || "").trim().slice(0, 30);
+  history.replaceState(null, "", location.pathname + location.hash);
+  const texto = nombre ? "Hola, " + nombre : "Hola";
+  const caja = document.getElementById("bienvenida");
+  const svgHola = document.getElementById("hola-svg");
+  const letras = document.getElementById("hola-letras");
+  document.getElementById("hola-lector").textContent = texto;
+  caja.hidden = false;
+  let terminado = false;
+  const salir = () => {
+    if (terminado) return;
+    terminado = true;
+    caja.classList.add("salir");
+    setTimeout(() => { caja.hidden = true; }, 550);
+  };
+  caja.addEventListener("click", salir);
+  const escribir = () => {
+    // se mide el texto completo y luego cada letra va en su propio <text>, para escribirlas una tras otra
+    const medida = document.createElementNS(NS, "text");
+    medida.textContent = texto;
+    letras.appendChild(medida);
+    const total = medida.getComputedTextLength();
+    const inicio = (900 - total) / 2;
+    // posición real de cada letra dentro del texto completo: así se respetan los espacios y el ajuste entre letras
+    const caracteres = [];
+    let indice = 0;
+    for (const c of texto) {
+      caracteres.push([c, medida.getStartPositionOfChar(indice).x]);
+      indice += c.length;
+    }
+    letras.textContent = "";
+    let retraso = 0;
+    caracteres.forEach(([c, x]) => {
+      if (c === " ") { retraso += 0.05; return; }
+      const el = document.createElementNS(NS, "text");
+      el.setAttribute("x", (inicio + x).toFixed(1));
+      el.setAttribute("y", "150");
+      el.textContent = c;
+      el.style.setProperty("--dur", "0.4s");
+      el.style.setProperty("--retraso", retraso.toFixed(2) + "s");
+      el.classList.add("escrita");
+      letras.appendChild(el);
+      retraso += 0.09;
+    });
+    // los colores de la bandera van de la primera a la última letra, sea cual sea el largo del saludo
+    const degradado = document.getElementById("hola-color");
+    degradado.setAttribute("x1", inicio.toFixed(1));
+    degradado.setAttribute("x2", (inicio + total).toFixed(1));
+    // si el nombre es muy largo, el dibujo se ajusta al ancho
+    const ancho = Math.max(900, total + 40);
+    svgHola.setAttribute("viewBox", `${((900 - ancho) / 2).toFixed(0)} 0 ${ancho.toFixed(0)} 220`);
+    // apenas termina de rellenarse la última letra, entra el mapa (retraso ya sumó el paso de una letra más)
+    setTimeout(salir, (retraso - 0.09 + 0.4) * 1000);
+  };
+  // se espera la letra cursiva, pero no más de 0,3 s si no carga
+  const fuente = document.fonts ? document.fonts.load('600 120px "Dancing Script"') : Promise.resolve();
+  Promise.race([fuente, new Promise(r => setTimeout(r, 300))]).then(escribir, escribir);
+})();
 const NS = "http://www.w3.org/2000/svg";
 const PEREIRA = "66001", DOSQUEBRADAS = "66170", SANTA_ROSA = "66682", MARSELLA = "66440";
+const LA_VIRGINIA = "66400", BELEN = "66088", APIA = "66045", BALBOA = "66075", GUATICA = "66318",
+  LA_CELIA = "66383", SANTUARIO = "66687", QUINCHIA = "66594", PUEBLO_RICO = "66572", MISTRATO = "66456";
 const NOTAS = {
   [PEREIRA]: " · Capital · Viaducto César Gaviria Trujillo (704 m)",
   [DOSQUEBRADAS]: " · Mirador El Chaquiro",
   [SANTA_ROSA]: " · Los Termales",
-  [MARSELLA]: " · Casa de la Cultura y su ajedrez gigante"
+  [MARSELLA]: " · Casa de la Cultura y su ajedrez gigante",
+  [LA_VIRGINIA]: " · Estatua del Caballero Gaucho",
+  [BELEN]: " · Parroquia Santa Rosa de Lima",
+  [APIA]: " · Museo Alboín Gómez",
+  [BALBOA]: " · El Balcón Florido",
+  [GUATICA]: " · Jardín Botánico",
+  [LA_CELIA]: " · Parque principal",
+  [SANTUARIO]: " · PNN Tatamá y sus frailejones",
+  [QUINCHIA]: " · Museo Tierras de Xixarca",
+  [PUEBLO_RICO]: " · Plaza principal y Alcaldía",
+  [MISTRATO]: " · Avistamiento de aves"
 };
 const PEQ = new Set(["66400", "66170", "66318", "66383", "66075"]);
 const base = document.getElementById("base");
@@ -268,6 +512,21 @@ DATA.forEach(m => {
   p.setAttribute("d", m.d);
   p.setAttribute("class", "forma");
   g.appendChild(p);
+  // relieve real (img/relieve.png, generado con fuentes/relieve.py): una sola imagen del tamaño del mapa,
+  // recortada con la forma de cada municipio para que crezca junto con él
+  const recorte = document.createElementNS(NS, "clipPath");
+  recorte.id = "recorte-" + m.code;
+  const rp = document.createElementNS(NS, "path");
+  rp.setAttribute("d", m.d);
+  recorte.appendChild(rp);
+  document.querySelector("#mapa defs").appendChild(recorte);
+  const rel = document.createElementNS(NS, "image");
+  rel.setAttribute("href", "img/relieve.png");
+  rel.setAttribute("width", __W__); rel.setAttribute("height", __H__);
+  rel.setAttribute("preserveAspectRatio", "none");
+  rel.setAttribute("clip-path", `url(#recorte-${m.code})`);
+  rel.setAttribute("class", "relieve");
+  g.appendChild(rel);
   ["rio1", "via2", "via1"].forEach(c => {
     if (!m[c]) return;
     const tr = document.createElementNS(NS, "path");
@@ -353,10 +612,12 @@ function fijarCabecera() {
   const cabecera = document.getElementById("cabecera");
   const texto = [nombre.textContent, dato.textContent];
   cabecera.style.minHeight = "";
-  let alto = cabecera.offsetHeight;
-  DATA.forEach(m => { mostrar(m); alto = Math.max(alto, cabecera.offsetHeight); });
+  // altura con decimales: offsetHeight redondea y la lista podía moverse un píxel
+  const medir = () => cabecera.getBoundingClientRect().height;
+  let alto = medir();
+  DATA.forEach(m => { mostrar(m); alto = Math.max(alto, medir()); });
   mostrar(null);
-  alto = Math.max(alto, cabecera.offsetHeight);
+  alto = Math.ceil(Math.max(alto, medir()));
   [nombre.textContent, dato.textContent] = texto;
   cabecera.style.minHeight = alto + "px";
 }
@@ -461,15 +722,65 @@ function crearModelo({ id, codigo, x, y, rotulo, esc, exagZ, exagY, picado, giro
   const vapor = (origen, fase, ini, dur) =>
     piezas.push({ el: document.createElementNS(NS, "circle"), vapor: true, origen, fase, ini, dur });
   // figura: silueta que siempre mira a la cámara; ruta(ahora) da su posición [x, y, z] en cada cuadro
-  const figura = ({ ref, unidades, alto, claro, voltear, ruta, ini, dur }) => {
+  // ref puede ser una lista de siluetas que se alternan (alas que aletean); relleno y trazo reemplazan
+  // el blanco/negro del ajedrez; encima > 0 la pinta por delante de otra figura en el mismo sitio
+  const figura = ({ ref, unidades, alto, claro, relleno, trazo, voltear, ruta, ini, dur, encima = 0, periodo = 140 }) => {
     const el = document.createElementNS(NS, "use");
-    el.setAttribute("href", ref);
-    el.setAttribute("fill", claro ? "url(#pieza-blanca)" : "url(#pieza-negra)");
-    el.setAttribute("stroke", claro ? "#6e6658" : "#050507");
+    const refs = Array.isArray(ref) ? ref : [ref];
+    el.setAttribute("href", refs[0]);
+    el.setAttribute("fill", relleno || (claro ? "url(#pieza-blanca)" : "url(#pieza-negra)"));
+    el.setAttribute("stroke", trazo || (claro ? "#6e6658" : "#050507"));
     el.setAttribute("stroke-width", "1");
     el.setAttribute("vector-effect", "non-scaling-stroke");
-    piezas.push({ el, figura: true, unidades, alto, voltear, ruta, ini, dur });
+    piezas.push({ el, figura: true, refs, unidades, alto, voltear, ruta, ini, dur, encima, periodo });
   };
+  // piezas reutilizables para los modelos de edificios y parques
+  const caja = (x0, y0, x1, y1, z0, z1, color, ini, dur, rebote = true) => {
+    cara([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], color, ini, dur, rebote);
+    cara([[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]], color, ini, dur, rebote);
+    cara([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]], color, ini, dur, rebote);
+    cara([[x0, y0, z0], [x0, y1, z0], [x0, y1, z1], [x0, y0, z1]], color, ini, dur, rebote);
+    cara([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], color, ini, dur, rebote);
+  };
+  // tejado a dos aguas; eje "x" = cumbrera paralela al eje x
+  const techo = (x0, y0, x1, y1, z, alto, color, ini, dur, eje = "x") => {
+    const oscuro = "#" + rgb(color).map(c => Math.round(c * 0.82).toString(16).padStart(2, "0")).join("");
+    if (eje === "x") {
+      const m = (y0 + y1) / 2;
+      cara([[x0, y0, z], [x1, y0, z], [x1, m, z + alto], [x0, m, z + alto]], color, ini, dur, true);
+      cara([[x0, y1, z], [x1, y1, z], [x1, m, z + alto], [x0, m, z + alto]], oscuro, ini, dur, true);
+      [x0, x1].forEach(x => cara([[x, y0, z], [x, y1, z], [x, m, z + alto]], "#e9e1d1", ini, dur, true));
+    } else {
+      const m = (x0 + x1) / 2;
+      cara([[x0, y0, z], [x0, y1, z], [m, y1, z + alto], [m, y0, z + alto]], color, ini, dur, true);
+      cara([[x1, y0, z], [x1, y1, z], [m, y1, z + alto], [m, y0, z + alto]], oscuro, ini, dur, true);
+      [y0, y1].forEach(y => cara([[x0, y, z], [x1, y, z], [m, y, z + alto]], "#e9e1d1", ini, dur, true));
+    }
+  };
+  const piramide = (cx, cy, a, z, alto, color, ini, dur) => {
+    const b = [[cx - a, cy - a, z], [cx + a, cy - a, z], [cx + a, cy + a, z], [cx - a, cy + a, z]];
+    b.forEach((v, i) => cara([v, b[(i + 1) % 4], [cx, cy, z + alto]], color, ini, dur, true));
+  };
+  // plataforma con canto de tierra, como la de los termales
+  const plataforma = (x0, y0, x1, y1, color, alto = 7) => {
+    cara([[x0, y0, -alto], [x1, y0, -alto], [x1, y0, 0], [x0, y0, 0]], "#6f5a42", 0, 0.26, false, 3);
+    cara([[x0, y0, -alto], [x0, y1, -alto], [x0, y1, 0], [x0, y0, 0]], "#5e4c38", 0, 0.26, false, 3);
+    cara([[x1, y0, -alto], [x1, y1, -alto], [x1, y1, 0], [x1, y0, 0]], "#5e4c38", 0, 0.26, false, 3);
+    cara([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], color, 0, 0.26, false, 2.5);
+  };
+  const plano = (x0, y0, x1, y1, z, color, ini, dur, nivel = 2) =>
+    cara([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]], color, ini, dur, false, nivel);
+  const disco = (cx, cy, r, z, color, ini, dur, nivel = 2) => {
+    const pts = [];
+    for (let i = 0; i < 14; i++) { const a = i / 14 * 2 * Math.PI; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a), z]); }
+    cara(pts, color, ini, dur, false, nivel);
+  };
+  const cono = (x, y, r, alto, color, ini, dur) => {
+    const b = [[x - r, y - r, 0], [x + r, y - r, 0], [x + r, y + r, 0], [x - r, y + r, 0]];
+    b.forEach((v, i) => cara([v, b[(i + 1) % 4], [x, y, alto]], color, ini, dur, true));
+  };
+  const arbol = (x, y, alto, ini, dur = 0.24) =>
+    figura({ ref: "#sil-copa", unidades: 78, alto, relleno: "url(#copa)", trazo: "#1d4a27", ruta: () => [x, y, 0], ini, dur });
   const viga = (P, Q, a, color, ini, dur, rebote) => {
     const d = [Q[0] - P[0], Q[1] - P[1], Q[2] - P[2]];
     const n = Math.hypot(...d);
@@ -486,7 +797,8 @@ function crearModelo({ id, codigo, x, y, rotulo, esc, exagZ, exagY, picado, giro
       cara([suma(P, e), suma(P, f), suma(Q, f), suma(Q, e)], color, ini, dur, rebote);
     });
   };
-  construir({ cara, linea, viga, vapor, figura });
+  // "base" ya es la capa del mapa en este ámbito: la plataforma se entrega a los modelos con ese nombre
+  construir({ cara, linea, viga, vapor, figura, caja, techo, piramide, base: plataforma, plano, disco, cono, arbol });
   piezas.forEach(p => grupo.appendChild(p.el));
   grupo.appendChild(texto);
 
@@ -511,7 +823,8 @@ function crearModelo({ id, codigo, x, y, rotulo, esc, exagZ, exagY, picado, giro
         const s = Math.max(0, (B[1] - T[1]) * conRebote(r)) / p.unidades;
         p.el.setAttribute("transform", `translate(${B[0].toFixed(1)} ${B[1].toFixed(1)}) scale(${(p.voltear ? -s : s).toFixed(3)} ${s.toFixed(3)})`);
         p.el.setAttribute("opacity", r > 0 ? 1 : 0);
-        return [B[2] - 15, i];
+        if (p.refs.length > 1) p.el.setAttribute("href", p.refs[MOVER ? Math.floor(ahora / p.periodo) % p.refs.length : 0]);
+        return [B[2] - 15 - p.encima * 0.5, i];
       }
       if (p.vapor) {
         const ciclo = MOVER ? (ahora / 2600 + p.fase) % 1 : p.fase;
@@ -586,7 +899,22 @@ function crearModelo({ id, codigo, x, y, rotulo, esc, exagZ, exagY, picado, giro
   // acompaña al municipio cuando crece: misma escala desde el mismo centro
   const bb = base.children[DATA.findIndex(m => m.code === codigo)].getBBox();
   capa.style.transformOrigin = `${bb.x + bb.width / 2}px ${bb.y + bb.height / 2}px`;
-  return { capa, grupo, estado, piezas, tic, cambiar };
+  // caja del modelo ya levantado, en coordenadas del mapa: se pinta un instante completo, se mide y se restaura
+  function medir() {
+    // sin el rótulo: su letra se achica al acercar y haría quedar la estructura más pequeña de lo previsto
+    const visible = capa.style.display, t0 = estado.t, ahora = performance.now();
+    capa.style.display = "";
+    texto.style.display = "none";
+    estado.t = 1;
+    pintar(ahora);
+    const c = grupo.getBBox();
+    estado.t = t0;
+    pintar(ahora);
+    texto.style.display = "";
+    capa.style.display = visible;
+    return { x: c.x + x, y: c.y + y, width: c.width, height: c.height };
+  }
+  return { capa, grupo, estado, piezas, tic, cambiar, medir };
 }
 
 const MODELOS = {
@@ -869,11 +1197,404 @@ const MODELOS = {
         colocar(FILA[f], f, 7, false);
       }
     }
+  }),
+
+  // ---- Resto de municipios: composiciones ilustrativas sobre la ubicación real ----
+
+  // La Virginia: estatua del Caballero Gaucho (Luis Ángel Ramírez, cantante de boleros y tangos) en su plaza.
+  // No se encontró una descripción de la estatua: la figura con sombrero, poncho y guitarra es supuesta.
+  [LA_VIRGINIA]: crearModelo({
+    id: "gaucho", codigo: LA_VIRGINIA, x: __LUGAR_GAUCHO_X__, y: __LUGAR_GAUCHO_Y__, rotulo: "Estatua del Caballero Gaucho",
+    esc: 1, exagZ: 1, exagY: 1, picado: 0.5, giro: 0.3, rotuloX: 0,
+    construir({ caja, base, disco, cara, viga, figura, arbol }) {
+      base(-60, -54, 60, 54, "#cdc6b6");
+      disco(0, 0, 32, 0.3, "#b9ae99", 0.1, 0.2);
+      disco(0, 0, 24, 0.5, "#d8d1c2", 0.12, 0.2, 1.5);
+      caja(-11, -11, 11, 11, 0, 12, "#d9d3c6", 0.2, 0.28);
+      caja(-8, -8, 8, 8, 12, 18, "#e6e0d3", 0.26, 0.26);
+      cara([[-6, -11.2, 3], [6, -11.2, 3], [6, -11.2, 9], [-6, -11.2, 9]], "#6b4a2a", 0.3, 0.2, true);
+      figura({ ref: "#sil-gaucho", unidades: 100, alto: 44, relleno: "url(#bronce)", trazo: "#3b2a17",
+        ruta: () => [0, 0, 18], ini: 0.5, dur: 0.32 });
+      // notas musicales que flotan: era cantante
+      [0, 1, 2].forEach(k => figura({ ref: "#sil-nota", unidades: 34, alto: 7, relleno: "#f3d36b", trazo: "#7a5a12",
+        ruta: t => [14 + k * 7, -6, 58 + k * 9 + (MOVER ? 3 * Math.sin(t / 650 + k * 2) : 0)], ini: 0.78 + k * 0.05, dur: 0.15 }));
+      [[-44, -36], [44, -36], [-46, 34], [46, 34]].forEach(([x, y], k) => arbol(x, y, 30, 0.3 + k * 0.03));
+      [[-30, -24], [30, -24], [-30, 24], [30, 24]].forEach(([x, y]) => caja(x - 7, y - 2, x + 7, y + 2, 0, 3, "#8a5a35", 0.34, 0.2));
+      [[-24, -40], [24, -40], [-24, 40], [24, 40]].forEach(([x, y]) => {
+        viga([x, y, 0], [x, y, 22], 0.8, "#2b2f37", 0.36, 0.2, true);
+        caja(x - 2, y - 2, x + 2, y + 2, 22, 26, "#ffe08a", 0.42, 0.16);
+      });
+    }
+  }),
+
+  // Belén de Umbría: Parroquia Santa Rosa de Lima. No se encontró descripción de su arquitectura:
+  // fachada con dos torres al estilo de los templos de la colonización antioqueña, supuesta.
+  // La puerta está abierta y el muro izquierdo tiene ventanales para ver el interior.
+  [BELEN]: crearModelo({
+    id: "parroquia", codigo: BELEN, x: __LUGAR_PARROQUIA_X__, y: __LUGAR_PARROQUIA_Y__, rotulo: "Parroquia Santa Rosa de Lima",
+    esc: 0.95, exagZ: 1, exagY: 1, picado: 0.42, giro: 0.72, rotuloX: 0,
+    construir({ caja, techo, piramide, base, plano, cara, viga, arbol }) {
+      const BLANCO = "#f7f2e7", MURO = "#f1ead9", ADENTRO = "#eadfc8", X = 20, Y0 = -18, Y1 = 50, Z = 30;
+      base(-62, -72, 62, 64, "#c9c2b4");
+      plano(-50, -70, 50, -30, 0.3, "#b9ae99", 0.08, 0.2);
+      // interior: piso, alfombra, bancas y altar con retablo dorado
+      plano(-X, -24, X, Y1, 0.4, "#cdbf9f", 0.1, 0.2, 1);
+      plano(-2.5, -24, 2.5, Y1 - 7, 0.6, "#9c2f2f", 0.14, 0.2, 0.9);
+      for (let i = 0; i < 7; i++) {
+        const y = -10 + i * 7;
+        caja(-15, y, -4, y + 3, 0, 4, "#6b4325", 0.3 + i * 0.01, 0.18);
+        caja(4, y, 15, y + 3, 0, 4, "#6b4325", 0.3 + i * 0.01, 0.18);
+      }
+      caja(-8, 42, 8, 47, 0, 6, "#d8b24a", 0.34, 0.2);
+      cara([[-12, Y1 - 0.2, 0], [12, Y1 - 0.2, 0], [12, Y1 - 0.2, 22], [0, Y1 - 0.2, 28], [-12, Y1 - 0.2, 22]], "#c9a227", 0.36, 0.2, true);
+      cara([[-1, Y1 - 0.4, 10], [1, Y1 - 0.4, 10], [1, Y1 - 0.4, 24], [-1, Y1 - 0.4, 24]], "#5b3a24", 0.4, 0.14, true);
+      cara([[-5, Y1 - 0.4, 19], [5, Y1 - 0.4, 19], [5, Y1 - 0.4, 21], [-5, Y1 - 0.4, 21]], "#5b3a24", 0.4, 0.14, true);
+      [-6, -3, 3, 6].forEach(x => caja(x - 0.6, 44, x + 0.6, 45.2, 6, 9, "#ffe08a", 0.42, 0.12));
+      // muros: fondo y derecho enteros; izquierdo por tramos, con tres ventanales abiertos
+      cara([[-X, Y1, 0], [X, Y1, 0], [X, Y1, Z], [-X, Y1, Z]], ADENTRO, 0.08, 0.34, true, 0.05);
+      cara([[X, Y0, 0], [X, Y1, 0], [X, Y1, Z], [X, Y0, Z]], ADENTRO, 0.08, 0.34, true, 0.05);
+      const muroIzq = (a, b, z0, z1) => cara([[-X, a, z0], [-X, b, z0], [-X, b, z1], [-X, a, z1]], MURO, 0.08, 0.34, true);
+      for (let y = Y0; y < Y1; y += 7) { muroIzq(y, Math.min(Y1, y + 7), 0, 3); muroIzq(y, Math.min(Y1, y + 7), 25, Z); }
+      [[Y0, -12], [2, 8], [22, 28], [42, Y1]].forEach(([a, b]) => muroIzq(a, b, 3, 25));
+      techo(-23, -18, 23, 52, Z, 14, "#b5523a", 0.36, 0.2, "y");
+      // fachada con la puerta abierta
+      const FY = -24;
+      const fachada = (x0, x1, z0, z1) => cara([[x0, FY, z0], [x1, FY, z0], [x1, FY, z1], [x0, FY, z1]], BLANCO, 0.1, 0.34, true);
+      fachada(-X, -8, 0, 38); fachada(8, X, 0, 38); fachada(-8, 8, 20, 38);
+      cara([[-X, FY, 38], [X, FY, 38], [X, Y0, 38], [-X, Y0, 38]], BLANCO, 0.1, 0.34, true);
+      [-X, X].forEach(x => cara([[x, FY, 0], [x, Y0, 0], [x, Y0, 38], [x, FY, 38]], BLANCO, 0.1, 0.34, true));
+      [-8, 8].forEach(x => cara([[x, FY, 0], [x, Y0, 0], [x, Y0, 20], [x, FY, 20]], ADENTRO, 0.12, 0.3, true));
+      cara([[-8, FY, 20], [8, FY, 20], [8, Y0, 20], [-8, Y0, 20]], ADENTRO, 0.12, 0.3, true);
+      const ABRE = 70 * Math.PI / 180;
+      [[-8, 1], [8, -1]].forEach(([x, l]) => {
+        const fx = x + l * 8 * Math.cos(ABRE), fy = FY - 8 * Math.sin(ABRE);
+        cara([[x, FY, 0], [fx, fy, 0], [fx, fy, 19.5], [x, FY, 19.5]], "#6b4325", 0.44, 0.2, true);
+      });
+      cara([[-10, FY - 0.2, 20], [10, FY - 0.2, 20], [0, FY - 0.2, 25]], "#e6dcc6", 0.4, 0.2, true);
+      cara([[-20, FY, 38], [20, FY, 38], [0, FY, 54]], BLANCO, 0.4, 0.2, true);
+      viga([0, FY - 0.5, 54], [0, FY - 0.5, 64], 0.8, "#c9a227", 0.6, 0.14, true);
+      viga([-4, FY - 0.5, 60], [4, FY - 0.5, 60], 0.8, "#c9a227", 0.62, 0.12, true);
+      const rosa = [];
+      for (let i = 0; i < 12; i++) { const a = i / 12 * 2 * Math.PI; rosa.push([5 * Math.cos(a), FY - 0.3, 28 + 5 * Math.sin(a)]); }
+      cara(rosa, "#c9a227", 0.42, 0.18, true);
+      [-22, 22].forEach(x => {
+        caja(x - 8, -28, x + 8, -12, 0, 58, BLANCO, 0.14, 0.38);
+        cara([[x - 4, -28.2, 44], [x + 4, -28.2, 44], [x + 4, -28.2, 53], [x - 4, -28.2, 53]], "#3a2d20", 0.46, 0.16, true);
+        piramide(x, -20, 9, 58, 14, "#9c4631", 0.5, 0.2);
+      });
+      [[46, -54], [48, 8], [48, 44], [-44, -62]].forEach(([x, y], k) => arbol(x, y, 28, 0.3 + k * 0.03));
+    }
+  }),
+
+  // Apía: Museo Alboín Gómez. No se encontró descripción del edificio ni de su colección: casona de dos
+  // pisos con balcón y un corredor abierto en el primer piso que deja ver la sala (cuadros y vitrinas), supuestos.
+  [APIA]: crearModelo({
+    id: "museo-apia", codigo: APIA, x: __LUGAR_MUSEO_APIA_X__, y: __LUGAR_MUSEO_APIA_Y__, rotulo: "Museo Alboín Gómez",
+    esc: 1, exagZ: 1, exagY: 1, picado: 0.3, giro: 0.3, rotuloX: 0,
+    construir({ caja, techo, base, plano, cara, linea, arbol }) {
+      const PARED = "#f4eee2", ADENTRO = "#efe2c8", X = 44, Y0 = -16, Y1 = 24, Z = 34, P1 = 17;
+      base(-62, -50, 62, 46, "#c6bfb0");
+      plano(-62, -50, 62, -28, 0.3, "#9d968a", 0.06, 0.2);
+      // sala del museo
+      plano(-X, Y0, X, Y1, 0.4, "#b89c74", 0.1, 0.2, 1);
+      cara([[-X, Y1, 0], [X, Y1, 0], [X, Y1, Z], [-X, Y1, Z]], ADENTRO, 0.08, 0.34, true, 0.05);
+      [-X, X].forEach(x => cara([[x, Y0, 0], [x, Y1, 0], [x, Y1, Z], [x, Y0, Z]], PARED, 0.08, 0.34, true, 0.05));
+      const CUADROS = [["#c0392b", "#f4d06f"], ["#2e86ab", "#a8dadc"], ["#6a994e", "#f2e8cf"], ["#8e44ad", "#f5b7b1"], ["#d35400", "#ffe5b4"]];
+      CUADROS.forEach(([marco, lienzo], i) => {
+        const x = -34 + i * 17;
+        cara([[x - 5, Y1 - 0.2, 4], [x + 5, Y1 - 0.2, 4], [x + 5, Y1 - 0.2, 13], [x - 5, Y1 - 0.2, 13]], "#7a4b28", 0.36, 0.16, true);
+        cara([[x - 4, Y1 - 0.4, 5], [x + 4, Y1 - 0.4, 5], [x + 4, Y1 - 0.4, 12], [x - 4, Y1 - 0.4, 12]], lienzo, 0.38, 0.16, true);
+        cara([[x - 3, Y1 - 0.6, 6], [x + 1, Y1 - 0.6, 6], [x - 1, Y1 - 0.6, 10]], marco, 0.4, 0.14, true);
+      });
+      [[-32, -4], [-11, -4], [11, -4], [32, -4]].forEach(([x, y], k) => {
+        caja(x - 4, y - 3, x + 4, y + 3, 0, 4, "#3a2d20", 0.32 + k * 0.02, 0.18);
+        caja(x - 1.5, y - 1, x + 1.5, y + 1, 4, 7, k === 1 ? "#d8b24a" : "#a0522d", 0.42 + k * 0.02, 0.14);
+        caja(x - 4, y - 3, x + 4, y + 3, 4, 9, "#cdeaf3", 0.46 + k * 0.02, 0.14);
+      });
+      // primer piso: corredor de columnas abierto al frente
+      [-42, -22, 0, 22, 42].forEach(x => caja(x - 2, Y0 - 1, x + 2, Y0 + 1, 0, P1, PARED, 0.12, 0.3));
+      cara([[-X, Y0 - 1, P1 - 3], [X, Y0 - 1, P1 - 3], [X, Y0 - 1, P1], [-X, Y0 - 1, P1]], PARED, 0.14, 0.3, true);
+      cara([[-10, Y0 - 1.2, P1 - 2.6], [10, Y0 - 1.2, P1 - 2.6], [10, Y0 - 1.2, P1 - 0.4], [-10, Y0 - 1.2, P1 - 0.4]], "#c9a227", 0.44, 0.14, true);
+      // segundo piso cerrado, con ventanas y balcón
+      cara([[-X, Y0, P1], [X, Y0, P1], [X, Y0, Z], [-X, Y0, Z]], PARED, 0.16, 0.32, true);
+      for (let i = 0; i < 5; i++) {
+        const x = -32 + i * 16;
+        cara([[x - 4, Y0 - 0.2, 21], [x + 4, Y0 - 0.2, 21], [x + 4, Y0 - 0.2, 30], [x - 4, Y0 - 0.2, 30]], "#2f5d8a", 0.32, 0.2, true);
+      }
+      techo(-47, -19, 47, 27, Z, 14, "#b5523a", 0.36, 0.2, "x");
+      caja(-42, -23, 42, Y0 - 1, P1, P1 + 1.5, "#7a4b28", 0.34, 0.2);
+      cara([[-42, -23, P1 + 1.5], [42, -23, P1 + 1.5], [42, -23, P1 + 6], [-42, -23, P1 + 6]], "#9a6636", 0.38, 0.2, true);
+      for (let i = 0; i <= 6; i++) linea([-42 + i * 14, -23, Z], [-42 + i * 14, -23, P1 + 1.5], "#7a4b28", 1.2, 0.4, 0.14);
+      [[-52, 36], [52, 36], [-54, -40], [54, -40]].forEach(([x, y], k) => arbol(x, y, 26, 0.3 + k * 0.03));
+    }
+  }),
+
+  // Balboa: "balcón florido y mirador regional", como lo llama un documento universitario. Casa con un largo
+  // balcón cubierto de flores frente al paisaje; la composición es ilustrativa.
+  [BALBOA]: crearModelo({
+    id: "balcon", codigo: BALBOA, x: __LUGAR_BALCON_X__, y: __LUGAR_BALCON_Y__, rotulo: "El Balcón Florido",
+    esc: 1, exagZ: 1, exagY: 1, picado: 0.48, giro: 0.3, rotuloX: 0,
+    construir({ caja, techo, base, cara, linea, cono, figura, arbol }) {
+      const COLORES = ["#e23d6d", "#f2b134", "#9b5de5", "#ff7f50", "#f15bb5", "#fee440"];
+      base(-62, -52, 62, 50, "#5e9a5c", 16);
+      // cerros al fondo: es un mirador
+      [[-46, 42, 15, 46], [46, 42, 15, 40], [0, 46, 12, 52]].forEach(([x, y, r, alto], k) =>
+        cono(x, y, r, alto, k === 2 ? "#3f7a4d" : "#4c8f5a", 0.05, 0.3));
+      caja(-36, 8, 36, 38, 0, 30, "#f6efe0", 0.08, 0.34);
+      techo(-39, 5, 39, 41, 30, 12, "#b5523a", 0.36, 0.2, "x");
+      for (let i = 0; i < 4; i++) {
+        const x = -24 + i * 16;
+        cara([[x - 4, 7.8, 0], [x + 4, 7.8, 0], [x + 4, 7.8, 12], [x - 4, 7.8, 12]], "#2e6f5e", 0.3, 0.2, true);
+        cara([[x - 4, 7.8, 18], [x + 4, 7.8, 18], [x + 4, 7.8, 27], [x - 4, 7.8, 27]], "#2e6f5e", 0.32, 0.2, true);
+      }
+      caja(-38, 0, 38, 8, 14, 15.5, "#7a4b28", 0.34, 0.2);
+      cara([[-38, 0, 15.5], [38, 0, 15.5], [38, 0, 20], [-38, 0, 20]], "#9a6636", 0.38, 0.2, true);
+      for (let i = 0; i <= 6; i++) linea([-38 + i * 12.67, 0, 30], [-38 + i * 12.67, 0, 15.5], "#7a4b28", 1.2, 0.4, 0.14);
+      // macetas con flores a lo largo del balcón y frente a la casa
+      const maceta = (x, y, z, k, ini) => {
+        figura({ ref: "#sil-maceta", unidades: 32, alto: 7, relleno: "#8a4b2c", trazo: "#4a2614", ruta: () => [x, y, z], ini, dur: 0.16 });
+        figura({ ref: "#sil-flores", unidades: 32, alto: 7, relleno: COLORES[k % COLORES.length], trazo: "#6b1d3a",
+          ruta: () => [x, y, z], ini: ini + 0.02, dur: 0.16, encima: 1 });
+      };
+      for (let i = 0; i < 12; i++) maceta(-34 + i * 6.2, -0.6, 20, i, 0.56 + i * 0.015);
+      for (let i = 0; i < 9; i++) maceta(-32 + i * 8, -4, 0, i + 3, 0.62 + i * 0.015);
+      // baranda del mirador al borde
+      for (let i = 0; i <= 8; i++) linea([-56 + i * 14, -50, 6], [-56 + i * 14, -50, 0], "#d9cfbd", 1.4, 0.4, 0.14);
+      linea([-56, -50, 6], [56, -50, 6], "#d9cfbd", 1.4, 0.42, 0.2);
+      [[-52, 30], [52, 30]].forEach(([x, y], k) => arbol(x, y, 28, 0.3 + k * 0.03));
+    }
+  }),
+
+  // Guática: Jardín Botánico (sendero registrado en OpenStreetMap). No se encontró una descripción:
+  // senderos, estanque, flores, árboles, arco de entrada y mariposas, ilustrativos.
+  [GUATICA]: crearModelo({
+    id: "jardin", codigo: GUATICA, x: __LUGAR_JARDIN_X__, y: __LUGAR_JARDIN_Y__, rotulo: "Jardín Botánico de Guática",
+    esc: 0.95, exagZ: 1, exagY: 1, picado: 0.55, giro: 0.3, rotuloX: 0,
+    construir({ base, plano, disco, cono, viga, cara, figura, arbol }) {
+      base(-64, -60, 64, 58, "#4c8f5a");
+      const SENDERO = "#d9c7a3";
+      plano(-5, -60, 5, -22, 0.3, SENDERO, 0.1, 0.2);
+      plano(-40, -28, 5, -18, 0.3, SENDERO, 0.12, 0.2);
+      plano(-40, -24, -30, 30, 0.3, SENDERO, 0.14, 0.2);
+      plano(-34, 24, 40, 34, 0.3, SENDERO, 0.16, 0.2);
+      plano(30, -4, 40, 30, 0.3, SENDERO, 0.18, 0.2);
+      disco(24, -30, 15, 0.4, "#5ab8e0", 0.2, 0.2);
+      [[20, -34], [30, -26], [18, -24]].forEach(([x, y], k) => disco(x, y, 2.4, 0.6, "#3f8a4a", 0.3 + k * 0.02, 0.1, 1.5));
+      [[-52, -44, "#e23d6d"], [52, 14, "#f2b134"], [-12, 6, "#9b5de5"], [10, 46, "#ff7f50"], [-54, 40, "#f15bb5"]].forEach(([x, y, c], k) =>
+        disco(x, y, 7, 0.5, c, 0.26 + k * 0.02, 0.14, 1.5));
+      [[-54, -18], [-52, 16], [-18, -46], [52, -50], [54, 44], [-10, 44], [14, 6], [-18, 18]].forEach(([x, y], k) =>
+        arbol(x, y, 26 + (k % 3) * 6, 0.3 + k * 0.025));
+      [[46, -10], [-24, -6], [40, 50], [-46, 52]].forEach(([x, y], k) => cono(x, y, 6, 26, "#285c36", 0.32 + k * 0.03, 0.24));
+      // arco de entrada
+      [-10, 10].forEach(x => viga([x, -58, 0], [x, -58, 22], 1.4, "#7a4b28", 0.4, 0.2, true));
+      viga([-12, -58, 22], [12, -58, 22], 1.6, "#7a4b28", 0.48, 0.16, true);
+      cara([[-9, -58.5, 16], [9, -58.5, 16], [9, -58.5, 21], [-9, -58.5, 21]], "#3f8a4a", 0.52, 0.14, true);
+      // animales: una garza a la orilla del estanque y una ardilla que salta junto al sendero
+      figura({ ref: "#ave-garza", unidades: 62, alto: 26, ruta: () => [10, -38, 0.5], ini: 0.7, dur: 0.2 });
+      figura({ ref: "#ardilla", unidades: 34, alto: 13, voltear: true,
+        ruta: t => [-34, 4, 0.5 + (MOVER ? 3 * Math.abs(Math.sin(t / 380)) : 0)], ini: 0.74, dur: 0.18 });
+      // mariposas que revolotean
+      [["#ff8c1a", 0, 18], ["#3a86ff", 2.1, 26], ["#ffd60a", 4.2, 22]].forEach(([c, fase, r], k) =>
+        figura({ ref: ["#sil-mariposa-a", "#sil-mariposa-b"], unidades: 30, alto: 6, relleno: c, trazo: "#3b2a17", periodo: 110 + k * 30,
+          ruta: t => MOVER ? [Math.cos(t / 1700 + fase) * r, Math.sin(t / 1700 + fase) * r, 18 + 5 * Math.sin(t / 420 + k)] : [r, 0, 18],
+          ini: 0.8, dur: 0.15 }));
+    }
+  }),
+
+  // La Celia: parque principal, según una foto de referencia del lugar: estatuas de bronce de un hombre con
+  // sombrero y de un caballo sobre un camino de piedra, placa conmemorativa, banderas de Risaralda y de Colombia,
+  // palma, árbol grande y, al fondo, el templo moderno de torre alta con franjas rojas y fachada calada.
+  // Proporciones y distancias son aproximadas.
+  [LA_CELIA]: crearModelo({
+    id: "parque-celia", codigo: LA_CELIA, x: __LUGAR_PARQUE_CELIA_X__, y: __LUGAR_PARQUE_CELIA_Y__, rotulo: "Parque principal de La Celia",
+    esc: 0.95, exagZ: 1, exagY: 1, picado: 0.5, giro: 0.3, rotuloX: 0,
+    construir({ caja, base, plano, cara, viga, figura, arbol }) {
+      const ROJO = "#b5372c", BLANCO = "#f4eee2";
+      base(-64, -64, 64, 72, "#5e9a5c");
+      // camino de piedra hasta las estatuas y su plataforma
+      cara([[-4, -64, 0.3], [12, -64, 0.3], [10, -12, 0.3], [-8, -12, 0.3]], "#d9d3c6", 0.08, 0.2, false, 2);
+      caja(-22, -12, 18, 6, 0, 1.6, "#cfc8b8", 0.14, 0.22);
+      figura({ ref: "#sil-caballo", unidades: 96, alto: 36, relleno: "url(#bronce)", trazo: "#3b2a17",
+        ruta: () => [-10, -2, 1.6], ini: 0.5, dur: 0.3 });
+      caja(2, -6, 12, 2, 1.6, 3.2, "#bfb8a8", 0.4, 0.18);
+      figura({ ref: "#sil-arriero", unidades: 106, alto: 40, relleno: "url(#bronce)", trazo: "#3b2a17",
+        ruta: () => [7, -2, 3.2], ini: 0.56, dur: 0.3, encima: 1 });
+      // placa conmemorativa inclinada
+      caja(26, -34, 40, -24, 0, 3, "#9d968a", 0.3, 0.2);
+      cara([[27, -33, 3.1], [39, -33, 3.1], [39, -25, 4.4], [27, -25, 4.4]], "#2b2f37", 0.36, 0.16, true);
+      // banderas de Risaralda y de Colombia
+      [[-26, 10, [["#ffffff", 4], ["#2e8b3a", 4]]], [-18, 16, [["#FCD116", 4], ["#003893", 2], ["#CE1126", 2]]]].forEach(([x, y, franjas], k) => {
+        viga([x, y, 0], [x, y, 62], 0.5, "#d9d9d9", 0.3 + k * 0.03, 0.24, true);
+        let z = 62;
+        franjas.forEach(([c, alto]) => {
+          cara([[x, y, z - alto], [x + 16, y, z - alto], [x + 16, y, z], [x, y, z]], c, 0.6 + k * 0.03, 0.16, true);
+          z -= alto;
+        });
+      });
+      // setos con flores rojas, palma y árbol grande
+      [[-60, -44, -30, -40], [24, -50, 58, -46], [-60, -20, -34, -16], [26, 20, 58, 24]].forEach(([x0, y0, x1, y1], k) => {
+        caja(x0, y0, x1, y1, 0, 4, "#2f6a3f", 0.2 + k * 0.02, 0.2);
+        caja(x0 + 1, y0 + 1, x1 - 1, y1 - 1, 4, 5, "#d8343f", 0.3 + k * 0.02, 0.16);
+      });
+      figura({ ref: "#sil-palma", unidades: 124, alto: 58, relleno: "url(#copa)", trazo: "#1d4a27", ruta: () => [-50, -4, 0], ini: 0.4, dur: 0.26 });
+      arbol(50, 2, 52, 0.42);
+      // templo al fondo: torre alta con franjas rojas y fachada calada
+      caja(-6, 44, 6, 54, 0, 92, BLANCO, 0.12, 0.4);
+      [-4, 2].forEach(x => cara([[x, 43.8, 0], [x + 2, 43.8, 0], [x + 2, 43.8, 92], [x, 43.8, 92]], ROJO, 0.3, 0.3, true));
+      caja(-7, 43, 7, 55, 92, 96, "#d8d1c2", 0.5, 0.16);
+      caja(10, 48, 50, 68, 0, 34, BLANCO, 0.12, 0.36);
+      [10, 48].forEach(x => cara([[x, 47.7, 0], [x + 2, 47.7, 0], [x + 2, 47.7, 34], [x, 47.7, 34]], ROJO, 0.3, 0.2, true));
+      for (let c = 0; c < 7; c++) for (let f = 0; f < 4; f++) {
+        const x = 15 + c * 4.6, z = 12 + f * 5;
+        cara([[x, 47.8, z], [x + 3, 47.8, z], [x + 3, 47.8, z + 3], [x, 47.8, z + 3]], "#8a8578", 0.4 + (c + f) * 0.008, 0.1, true);
+      }
+      cara([[24, 47.8, 0], [34, 47.8, 0], [34, 47.8, 9], [24, 47.8, 9]], "#3a2d20", 0.38, 0.14, true);
+      caja(-46, 50, -10, 66, 0, 18, BLANCO, 0.12, 0.3);
+      [-46, -12].forEach(x => cara([[x, 49.8, 0], [x + 2, 49.8, 0], [x + 2, 49.8, 18], [x, 49.8, 18]], ROJO, 0.3, 0.2, true));
+    }
+  }),
+
+  // Santuario: Parque Nacional Natural Tatamá, uno de los páramos de Colombia sin alteración humana.
+  // Una fuente académica describe su páramo con frailejones, pajonales y humedales. El macizo de cima
+  // plana, las lagunas y la niebla son ilustrativos; la especie de frailejón no está confirmada.
+  [SANTUARIO]: crearModelo({
+    id: "tatama", codigo: SANTUARIO, x: __LUGAR_TATAMA_X__, y: __LUGAR_TATAMA_Y__, rotulo: "PNN Tatamá · Frailejones",
+    esc: 1, exagZ: 1, exagY: 1, picado: 0.5, giro: 0.3, rotuloX: 0,
+    construir({ cara, disco, figura, vapor }) {
+      const LADOS = 12, BAJO = [74, 70, 78, 72, 68, 76, 70, 80, 66, 72, 78, 70], ALTO = 30;
+      const pt = (r, i, z) => { const a = i / LADOS * 2 * Math.PI; return [r * Math.cos(a), r * 0.8 * Math.sin(a), z]; };
+      for (let i = 0; i < LADOS; i++) {
+        const j = (i + 1) % LADOS, arriba = k => BAJO[k] * 0.72;
+        cara([pt(BAJO[i], i, 0), pt(BAJO[j], j, 0), pt(arriba(j), j, ALTO), pt(arriba(i), i, ALTO)], i % 2 ? "#4f5a35" : "#5c6a3c", 0, 0.4, true);
+      }
+      const cima = [];
+      for (let i = 0; i < LADOS; i++) cima.push(pt(BAJO[i] * 0.72, i, ALTO));
+      cara(cima, "#9aa65b", 0, 0.4, true, 0.2);
+      disco(-18, 8, 9, ALTO + 0.3, "#6fb7d6", 0.3, 0.2, 0.1);
+      disco(16, 18, 6, ALTO + 0.3, "#6fb7d6", 0.32, 0.2, 0.1);
+      // frailejones: tronco con hojas secas, roseta plateada y espigas amarillas
+      // el primero, grande y al frente, es el protagonista
+      [[2, -34, 52], [-30, -20, 36], [26, -20, 34], [34, 4, 28], [-36, 6, 26], [4, -4, 30], [-12, 24, 22], [30, 26, 20],
+       [-2, 32, 18], [-24, -2, 28], [42, -12, 24]].forEach(([x, y, alto], k) => {
+        const pos = () => [x, y, ALTO];
+        figura({ ref: "#sil-frailejon", unidades: 100, alto, relleno: "url(#frailejon)", trazo: "#4b5130", ruta: pos, ini: 0.5 + k * 0.025, dur: 0.24 });
+        if (k % 3 !== 2) figura({ ref: "#sil-frailejon-flor", unidades: 100, alto, relleno: "#f2c53d", trazo: "#8a6a12", ruta: pos, ini: 0.6 + k * 0.025, dur: 0.2, encima: 1 });
+      });
+      // niebla que sube por las laderas
+      [[-44, -22], [-22, -36], [24, -38], [44, -16], [46, 16], [-46, 16]].forEach(([x, y], k) => vapor([x, y, ALTO], k * 0.17, 0.6, 0.3));
+    }
+  }),
+
+  // Quinchía: museo arqueológico. La fuente lo llama "Tierras de Xixarca" y destaca su colección quimbaya;
+  // el poporo de oro es un objeto típico de esa cultura. Edificio y disposición, ilustrativos.
+  [QUINCHIA]: crearModelo({
+    id: "museo-quinchia", codigo: QUINCHIA, x: __LUGAR_MUSEO_QUINCHIA_X__, y: __LUGAR_MUSEO_QUINCHIA_Y__, rotulo: "Museo Tierras de Xixarca",
+    esc: 1, exagZ: 1, exagY: 1, picado: 0.5, giro: 0.3, rotuloX: 0,
+    construir({ caja, techo, base, cara, cono, figura, arbol }) {
+      base(-62, -54, 62, 54, "#c6bfb0");
+      [[-44, 46, 14, 46], [44, 46, 14, 52]].forEach(([x, y, r, alto], k) => cono(x, y, r, alto, k ? "#3f7a4d" : "#4c8f5a", 0.04, 0.3));
+      caja(-40, 6, 40, 36, 0, 26, "#efe4cf", 0.08, 0.34);
+      techo(-43, 3, 43, 39, 26, 11, "#b5523a", 0.36, 0.2, "x");
+      cara([[-40, 5.8, 19], [40, 5.8, 19], [40, 5.8, 23], [-40, 5.8, 23]], "#8a3b24", 0.32, 0.18, true);
+      for (let i = 0; i < 8; i++) cara([[-38 + i * 10, 5.6, 20], [-34 + i * 10, 5.6, 20], [-36 + i * 10, 5.6, 22.5]], "#e3b23c", 0.34, 0.16, true);
+      cara([[-7, 5.8, 0], [7, 5.8, 0], [7, 5.8, 15], [-7, 5.8, 15]], "#5b3a24", 0.3, 0.2, true);
+      [-28, 24].forEach(x => cara([[x - 5, 5.8, 6], [x + 5, 5.8, 6], [x + 5, 5.8, 14], [x - 5, 5.8, 14]], "#5b3a24", 0.3, 0.2, true));
+      // poporo quimbaya gigante al frente y dos piezas menores en vitrinas
+      caja(-9, -26, 9, -8, 0, 6, "#3a2d20", 0.3, 0.24);
+      figura({ ref: "#sil-poporo", unidades: 92, alto: 34, relleno: "url(#oro)", trazo: "#6b4a0e", ruta: () => [0, -17, 6], ini: 0.56, dur: 0.3 });
+      [-30, 30].forEach((x, k) => {
+        caja(x - 5, -22, x + 5, -12, 0, 10, "#3a2d20", 0.34, 0.22);
+        figura({ ref: "#sil-poporo", unidades: 92, alto: 12, relleno: "url(#oro)", trazo: "#6b4a0e", ruta: () => [x, -17, 10], ini: 0.66 + k * 0.04, dur: 0.2 });
+      });
+      [[-52, -42], [52, -42], [-54, 20], [54, 20]].forEach(([x, y], k) => arbol(x, y, 26, 0.3 + k * 0.03));
+    }
+  }),
+
+  // Pueblo Rico: plaza principal frente a la Alcaldía. Un blog describe palmas altas y un busto de Bolívar
+  // pintado; las fachadas y el piso de colores siguen lo pedido para este mapa y son ilustrativos.
+  [PUEBLO_RICO]: crearModelo({
+    id: "plaza-pueblo-rico", codigo: PUEBLO_RICO, x: __LUGAR_PLAZA_PR_X__, y: __LUGAR_PLAZA_PR_Y__, rotulo: "Plaza principal y Alcaldía de Pueblo Rico",
+    esc: 0.85, exagZ: 1, exagY: 1, picado: 0.55, giro: 0.3, rotuloX: 0,
+    construir({ caja, techo, base, plano, cara, viga, figura }) {
+      const COLORES = ["#f2c14e", "#4cc3c9", "#ef6f9a", "#f08a4b", "#7bc96f", "#5b8def", "#c77dff", "#f25f5c"];
+      base(-76, -66, 76, 78, "#c9c2b4");
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++)
+        plano(-40 + i * 20, -40 + j * 20, -20 + i * 20, -20 + j * 20, 0.4, COLORES[(i + j * 3) % 8], 0.1 + (i + j) * 0.012, 0.12, 1);
+      [[-30, -30], [30, -30], [-30, 30], [30, 30]].forEach(([x, y], k) =>
+        figura({ ref: "#sil-palma", unidades: 124, alto: 44, relleno: "url(#copa)", trazo: "#1d4a27", ruta: () => [x, y, 0], ini: 0.4 + k * 0.03, dur: 0.26 }));
+      // busto pintado de Bolívar
+      caja(-5, -5, 5, 5, 0, 14, "#f4f1ea", 0.3, 0.24);
+      cara([[-5.2, -5.2, 6], [5.2, -5.2, 6], [5.2, -5.2, 9], [-5.2, -5.2, 9]], "#f2c14e", 0.34, 0.16, true);
+      figura({ ref: "#sil-busto", unidades: 30, alto: 12, relleno: "#1f4f9c", trazo: "#0e2a56", ruta: () => [0, 0, 14], ini: 0.56, dur: 0.22 });
+      figura({ ref: "#sil-cabeza", unidades: 30, alto: 12, relleno: "#d8a27a", trazo: "#6b4a2a", ruta: () => [0, 0, 14], ini: 0.58, dur: 0.22, encima: 1 });
+      // alcaldía al fondo, con la bandera de Colombia
+      caja(-30, 48, 30, 70, 0, 30, "#f4eee2", 0.08, 0.34);
+      techo(-33, 45, 33, 73, 30, 11, "#b5523a", 0.36, 0.2, "x");
+      for (let i = 0; i < 5; i++) {
+        const x = -20 + i * 10;
+        cara([[x - 3, 47.8, 3], [x + 3, 47.8, 3], [x + 3, 47.8, 13], [x - 3, 47.8, 13]], "#2f5d8a", 0.3, 0.18, true);
+        cara([[x - 3, 47.8, 18], [x + 3, 47.8, 18], [x + 3, 47.8, 27], [x - 3, 47.8, 27]], "#2f5d8a", 0.32, 0.18, true);
+      }
+      viga([0, 42, 0], [0, 42, 52], 0.6, "#d9d9d9", 0.4, 0.2, true);
+      [["#FCD116", 52, 48], ["#003893", 48, 46], ["#CE1126", 46, 44]].forEach(([c, z1, z0]) =>
+        cara([[0, 42, z0], [14, 42, z0], [14, 42, z1], [0, 42, z1]], c, 0.6, 0.16, true));
+      // casas de colores a los lados
+      [-1, 1].forEach((l, s) => [[-60, -30], [-26, 4], [8, 40]].forEach(([y0, y1], k) => {
+        const x0 = l < 0 ? -74 : 54, x1 = l < 0 ? -54 : 74;
+        caja(x0, y0, x1, y1, 0, 20, COLORES[(k * 2 + s * 5) % 8], 0.12 + k * 0.03, 0.3);
+        techo(x0 - 2, y0, x1 + 2, y1, 20, 7, "#b5523a", 0.36, 0.18, "y");
+      }));
+    }
+  }),
+
+  // Mistrató: avistamiento de aves. Su ruta de aviturismo lleva el nombre de la Bangsia aurinegra
+  // (negra con pecho dorado), especie emblemática del municipio. Bosque, torre y bandada, ilustrativos.
+  [MISTRATO]: crearModelo({
+    id: "aves", codigo: MISTRATO, x: __LUGAR_AVES_X__, y: __LUGAR_AVES_Y__, rotulo: "Avistamiento de aves · Bangsia aurinegra",
+    esc: 0.95, exagZ: 1, exagY: 1, picado: 0.5, giro: 0.3, rotuloX: 0,
+    construir({ caja, base, cono, viga, linea, piramide, figura, arbol }) {
+      base(-64, -56, 64, 56, "#4c8f5a");
+      [[-50, 40], [-20, 46], [14, 44], [48, 38], [52, -6], [-52, -6], [-36, 18], [36, 20], [0, 22]].forEach(([x, y], k) =>
+        arbol(x, y, 28 + (k % 3) * 7, 0.2 + k * 0.02));
+      [[-40, -40], [44, -42], [-12, 34], [24, 30]].forEach(([x, y], k) => cono(x, y, 6, 30, "#285c36", 0.24 + k * 0.03, 0.24));
+      // torre de observación de madera
+      const L = 7, Z = 30;
+      [[-30 - L, -10 - L], [-30 + L, -10 - L], [-30 + L, -10 + L], [-30 - L, -10 + L]].forEach(([x, y]) =>
+        viga([x, y, 0], [x, y, Z + 12], 1.1, "#7a4b28", 0.34, 0.26, true));
+      caja(-30 - L - 2, -10 - L - 2, -30 + L + 2, -10 + L + 2, Z, Z + 1.6, "#a57f58", 0.4, 0.22);
+      [[-30 - L, -10 - L], [-30 + L, -10 - L], [-30 + L, -10 + L], [-30 - L, -10 + L]].forEach(([x, y], i, t) =>
+        linea([x, y, Z + 5], [t[(i + 1) % 4][0], t[(i + 1) % 4][1], Z + 5], "#f3ead6", 1.2, 0.56, 0.16));
+      piramide(-30, -10, L + 4, Z + 12, 8, "#6f5a3a", 0.5, 0.2);
+      viga([-30 + L, -10 - L - 1, 0], [-30 + L - 2, -10 - L - 1, Z], 1, "#a57f58", 0.44, 0.2);
+      // la Bangsia aurinegra, grande y posada en una rama, al frente
+      viga([8, -30, 24], [50, -30, 24], 1.4, "#5a3a22", 0.44, 0.2, true);
+      viga([44, -30, 0], [44, -30, 24], 1.8, "#5a3a22", 0.4, 0.2, true);
+      const posada = t => [28, -30, 25 + (MOVER ? 0.6 * Math.abs(Math.sin(t / 900)) : 0)];
+      figura({ ref: "#ave-bangsia", unidades: 44, alto: 26, ruta: posada, ini: 0.66, dur: 0.24 });
+      // bandada que vuela en círculos sobre el bosque
+      for (let k = 0; k < 6; k++) {
+        const r = 26 + k * 6, vel = 2200 + k * 350, fase = k * 1.1, h = 46 + (k % 3) * 8;
+        figura({ ref: ["#sil-ave-a", "#sil-ave-b"], unidades: 30, alto: 5, relleno: "#2a2d35", trazo: "#000000", periodo: 150 + k * 20,
+          ruta: t => MOVER ? [Math.cos(t / vel + fase) * r, Math.sin(t / vel + fase) * r * 0.7, h + 3 * Math.sin(t / 500 + k)] : [Math.cos(fase) * r, Math.sin(fase) * r * 0.7, h],
+          ini: 0.78 + k * 0.02, dur: 0.14 });
+      }
+    }
   })
 };
 function hayFoco() { return document.body.classList.contains("foco"); }
 const AYUDA_NORMAL = document.getElementById("ayuda").textContent;
 // Para sumar otro municipio basta con agregar su modelo a MODELOS y su texto a NOTAS.
+// Al abrir una estructura el mapa se acerca solo, para que se vea grande y centrada; al cerrarla vuelve
+// a la vista que había antes. Mientras está abierta se puede seguir acercando, alejando y moviendo a gusto.
+let vistaPrevia = null;
+function enfocar(codigo) {
+  const c = MODELOS[codigo].medir();
+  const OCUPA = 0.62;   // parte del recuadro que ocupa la estructura
+  z = Math.min(ZMAX, Math.max(ZMIN, Math.min(W * OCUPA / c.width, H * OCUPA / c.height)));
+  tx = W / 2 - (c.x + c.width / 2) * z;
+  ty = H / 2 - (c.y + c.height / 2) * z;
+  aplicar(true);
+}
 function alternar(codigo) {
   const cerrar = hayFoco();
   if (!cerrar && !MODELOS[codigo]) return;   // municipio todavía sin estructura
@@ -882,6 +1603,14 @@ function alternar(codigo) {
   Object.keys(MODELOS).forEach(c => MODELOS[c].cambiar(!cerrar && c === codigo));
   document.body.classList.toggle("foco", !cerrar);
   document.getElementById("ayuda").textContent = cerrar ? AYUDA_NORMAL : "Clic en cualquier parte o Esc para cerrar";
+  if (!cerrar) {
+    vistaPrevia = { z, tx, ty };
+    enfocar(codigo);
+  } else if (vistaPrevia) {
+    ({ z, tx, ty } = vistaPrevia);
+    vistaPrevia = null;
+    aplicar(true);
+  }
 }
 // fuera del mapa: los botones de zoom siguen funcionando; lo demás solo cierra la estructura
 document.addEventListener("click", e => {
